@@ -3,7 +3,7 @@ import time
 import signal
 
 # Define the command and arguments
-command = ['sudo', 'mitm6', '-d', 'hmi.local', '-ignore-nofqdn', '-i', 'eth0']
+command = ['sudo', 'mitm6', '-d', 'domain', '-ignore-nofqdn', '-i', 'eth0']
 
 # Define the wait time of 10 minutes in seconds
 wait_time_between_commands = 10 * 60

